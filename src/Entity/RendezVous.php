@@ -14,6 +14,9 @@ use Symfony\Component\Serializer\Attribute\Groups as AttributeGroups;
 #[ORM\Entity(repositoryClass: RendezVousRepository::class)]
 class RendezVous
 {
+    public const STATUT_ACCEPTE = 'accepté';
+    public const STATUT_REFUSE = 'refusé';
+    public const STATUT_ENATTENTE = 'en_attente';
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

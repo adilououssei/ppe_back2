@@ -16,13 +16,30 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 final class SpecialiteController extends AbstractController
 {
     #[Route('/api/specialites', name: 'app_specialite', methods: ['GET'])]
-    public function ListeSpecialite(SpecialiteRepository $specialite, SerializerInterface $serializer): JsonResponse
-    {
+    public function ListeSpecialite(
+        SpecialiteRepository $specialiteRepository,
+        SerializerInterface $serializer,
+        Request $request
+    ): JsonResponse {
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = max(1, (int) $request->query->get('limit', 10));
+        $offset = ($page - 1) * $limit;
 
-        $specialites = $specialite->findAll();
-        $jsonSpecialite = $serializer->serialize($specialites, 'json', ['groups' => 'getDocteur']);
+        $total = $specialiteRepository->count([]);
+        $specialites = $specialiteRepository->findBy([], null, $limit, $offset);
+
+        $data = [
+            'data' => $specialites,
+            'page' => $page,
+            'limit' => $limit,
+            'total' => $total,
+            'totalPages' => ceil($total / $limit),
+        ];
+
+        $jsonSpecialite = $serializer->serialize($data, 'json', ['groups' => 'getDocteur']);
         return new JsonResponse($jsonSpecialite, Response::HTTP_OK, [], true);
     }
+
 
     #[Route('/api/specialites', name: 'app_specialite_create', methods: ['POST'])]
     public function create(Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator): JsonResponse

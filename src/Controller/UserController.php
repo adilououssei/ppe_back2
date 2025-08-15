@@ -229,19 +229,34 @@ class UserController extends AbstractController
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
     public function me(Security $security): JsonResponse
     {
-        // Récupérer l'utilisateur connecté
+        /** @var User|null $user */
         $user = $security->getUser();
 
-        // Si aucun utilisateur n'est connecté
         if (!$user) {
             return new JsonResponse(['error' => 'User not authenticated'], 401);
         }
 
-        // Retourner les informations de l'utilisateur
-        return new JsonResponse([
+        $response = [
             'id' => $user->getUserIdentifier(),
             'email' => $user->getUserIdentifier(),
             'roles' => $user->getRoles(),
-        ]);
+        ];
+
+        // Vérifie si le user est un docteur et s’il a un objet Docteur lié
+        if (in_array('ROLE_DOCTOR', $user->getRoles()) && $user->getDocteur()) {
+            $docteur = $user->getDocteur();
+            $response['nom'] = $docteur->getNom();
+            $response['prenom'] = $docteur->getPrenom();
+            $response['telephone'] = $docteur->getTelephone();
+        }
+
+        // Pour l’admin
+        if (in_array('ROLE_ADMIN', $user->getRoles())) {
+            $response['nom'] = 'Administrateur';
+            $response['prenom'] = '';
+            $response['telephone'] = '';
+        }
+
+        return new JsonResponse($response);
     }
 }

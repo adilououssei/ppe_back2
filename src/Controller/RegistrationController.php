@@ -5,79 +5,64 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Entity\Patient;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpFoundation\Request;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
-class RegistrationController
+class RegistrationController extends AbstractController
 {
-    #[Route('/api/register', name: 'api_register', methods: ['POST'])]
+    #[Route('/api/register', name: 'app_register', methods: ['POST'])]
     public function register(
         Request $request,
-        SerializerInterface $serializer,
         EntityManagerInterface $em,
         UserPasswordHasherInterface $passwordHasher,
-        ValidatorInterface $validator
+        JWTTokenManagerInterface $jwtManager
     ): JsonResponse {
-        try {
-            // Désérialisation de l'utilisateur
-            $user = $serializer->deserialize($request->getContent(), User::class, 'json');
-            $patient = $serializer->deserialize($request->getContent(), Patient::class, 'json');
-        } catch (\Exception $e) {
-            return new JsonResponse(
-                ['error' => 'Données invalides ou mal formatées : ' . $e->getMessage()],
-                Response::HTTP_BAD_REQUEST
-            );
+        $data = json_decode($request->getContent(), true);
+
+        if (empty($data['email']) || empty($data['password']) || empty($data['nom']) || empty($data['prenom'])) {
+            return new JsonResponse(['message' => 'Champs manquants'], 400);
         }
+
+        $existingUser = $em->getRepository(User::class)->findOneBy(['email' => $data['email']]);
+        if ($existingUser) {
+            return new JsonResponse(['message' => 'Cet email est déjà utilisé'], 409);
+        }
+
+        $user = new User();
+        $user->setEmail($data['email']);
+        $user->setRoles(['ROLE_PATIENT']);
+        $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
+        $user->setPassword($hashedPassword);
+
+        $patient = new Patient();
+        $patient->setUser($user);
+        $patient->setNom($data['nom']);
+        $patient->setPrenom($data['prenom']);
+        $patient->setAdresse($data['adresse'] ?? null);
+        $patient->setTelephone($data['telephone'] ?? null);
 
         $user->setPatient($patient);
 
-        
-        // Extraction du mot de passe brut
-        $data = json_decode($request->getContent(), true);
-        $plainPassword = $data['password'] ?? null;
+        $em->persist($user);
+        $em->persist($patient);
+        $em->flush();
 
-        if (!$plainPassword) {
-            return new JsonResponse(
-                ['error' => 'Le mot de passe est requis'],
-                Response::HTTP_BAD_REQUEST
-            );
-        }
+        $token = $jwtManager->create($user);
 
-        // Hashage du mot de passe
-        $hashedPassword = $passwordHasher->hashPassword($user, $plainPassword);
-        $user->setPassword($hashedPassword);
-        // Vérification des erreurs de validation
-        $errors = $validator->validate($user);
-        if (count($errors) > 0) {
-            return new JsonResponse(
-                ['error' => (string) $errors],
-                Response::HTTP_BAD_REQUEST
-            );
-        }
-
-        
-
-        try {
-            // Enregistrement dans la base de données
-            $em->persist($user);
-            $em->persist($patient);
-            $em->flush();
-
-            return new JsonResponse([
-                'message' => 'Inscription réussie',
-                'userId' => $user->getId(),
-                'patientId' => $patient->getId()
-            ], Response::HTTP_CREATED);
-        } catch (\Exception $e) {
-            return new JsonResponse(
-                ['error' => 'Erreur lors de la création du compte : ' . $e->getMessage()],
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
-        }
+        return new JsonResponse([
+            'message' => 'Inscription réussie',
+            'token' => $token,
+            'user' => [
+                'id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'roles' => $user->getRoles(),
+                'nom' => $patient->getNom(),
+                'prenom' => $patient->getPrenom(),
+            ]
+        ], 201);
     }
 }
