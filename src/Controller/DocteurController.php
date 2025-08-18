@@ -65,10 +65,15 @@ final class DocteurController extends AbstractController
     ): JsonResponse {
         $data = json_decode($request->getContent(), true);
 
+        // Vérification des champs obligatoires
+        if (empty($data['email']) || empty($data['password']) || empty($data['nom']) || empty($data['prenom']) || empty($data['telephone'])) {
+            return new JsonResponse(['error' => 'Tous les champs obligatoires doivent être remplis'], Response::HTTP_BAD_REQUEST);
+        }
+
         // Création User
         $user = new User();
         $user->setEmail($data['email']);
-        $user->setRoles(['ROLE_DOCTOR']);
+        $user->setRoles(['ROLE_DOCTEUR']); // rôle correct
         $hashedPassword = $passwordHasher->hashPassword($user, $data['password']);
         $user->setPassword($hashedPassword);
 
@@ -79,20 +84,31 @@ final class DocteurController extends AbstractController
         $docteur->setTelephone($data['telephone']);
         $docteur->setUser($user);
 
-        // Association spécialité
+        // Association spécialité (si fournie)
         if (!empty($data['specialiteId'])) {
             $specialite = $specialiteRepo->find($data['specialiteId']);
             if ($specialite) {
-                $docteur->getSpecialites($specialite);
+                $docteur->addSpecialite($specialite); // méthode standard pour ManyToMany
             }
         }
 
-        $em->persist($user);
-        $em->persist($docteur);
-        $em->flush();
+        try {
+            $em->persist($user);
+            $em->persist($docteur);
+            $em->flush();
 
-        return new JsonResponse(['message' => 'Médecin créé avec succès'], Response::HTTP_CREATED);
+            return new JsonResponse([
+                'message' => 'Médecin créé avec succès',
+                'docteurId' => $docteur->getId()
+            ], Response::HTTP_CREATED);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'error' => 'Erreur lors de la création du médecin',
+                'details' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
+
 
     #[Route('/api/docteurs/{id}', name: 'app_docteur_update', methods: ['PUT'])]
     public function update(
