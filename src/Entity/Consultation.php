@@ -6,6 +6,8 @@ use App\Repository\ConsultationRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Serializer\Attribute\Ignore;
+use Symfony\Component\Serializer\Attribute\MaxDepth;
 
 #[ORM\Entity(repositoryClass: ConsultationRepository::class)]
 class Consultation
@@ -18,6 +20,7 @@ class Consultation
     #[ORM\ManyToOne(inversedBy: 'consultations')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups('consultation:read')]
+    #[Ignore]
     private ?Patient $patient = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
@@ -53,7 +56,7 @@ class Consultation
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\OneToOne(inversedBy: 'consultation', cascade: ['persist', 'remove'])]
-    #[Groups('consultation:read')]
+    #[Ignore]
     private ?RendezVous $rendezVous = null;
 
     public function getId(): ?int

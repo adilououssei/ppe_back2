@@ -2,13 +2,14 @@
 
 namespace App\Entity;
 
-use App\Repository\PatientRepository;
 use App\Entity\User;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\PatientRepository;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\Ignore;
+use Symfony\Component\Serializer\Attribute\MaxDepth;
 use Symfony\Component\Serializer\Attribute\Groups as AttributeGroups;
 
 #[ORM\Entity(repositoryClass: PatientRepository::class)]
@@ -39,7 +40,7 @@ class Patient
      * @var Collection<int, RendezVous>
      */
     #[ORM\OneToMany(targetEntity: RendezVous::class, mappedBy: 'patient')]
-    #[Groups(["getPatient"])]
+    #[Ignore]
     private Collection $rendezVouses;
 
     /**
@@ -57,6 +58,8 @@ class Patient
      * @var Collection<int, Consultation>
      */
     #[ORM\OneToMany(targetEntity: Consultation::class, mappedBy: 'patient', orphanRemoval: true)]
+    #[Groups(["getPatient"])]
+    #[MaxDepth(1)]
     private Collection $consultations;
 
     public function __construct()

@@ -45,21 +45,25 @@ class ConsultationController extends AbstractController
             return new JsonResponse(['error' => 'Accès réservé aux docteurs'], 403);
         }
 
-        $qb = $this->em->getRepository(Consultation::class)->createQueryBuilder('c')
-            ->join('c.rendezVous', 'r')
+        // On filtre directement sur Consultation
+        $consultations = $this->em->getRepository(Consultation::class)
+            ->createQueryBuilder('c')
+            ->innerJoin('c.rendezVous', 'r')
             ->where('r.docteur = :docteur')
-            ->andWhere('LOWER(r.typeConsultation) LIKE :type')
-            ->andWhere('LOWER(r.statut) = :statut')
+            ->andWhere('LOWER(c.type) LIKE :type OR LOWER(r.typeConsultation) LIKE :type')
+            ->andWhere('c.statut != :statutTermine')
             ->setParameter('docteur', $docteur)
-            ->setParameter('type', '%en ligne%')
-            ->setParameter('statut', 'confirmé')
-            ->orderBy('r.dateConsultationAt', 'ASC')
-            ->addOrderBy('r.heureConsultation', 'ASC');
+            ->setParameter('type', 'en_ligne')
+            ->setParameter('statutTermine', 'terminé')
+            ->orderBy('c.dateConsul', 'ASC')
+            ->addOrderBy('c.heureConsul', 'ASC')
+            ->getQuery()
+            ->getResult();
 
-        $consultations = $qb->getQuery()->getResult();
 
         $json = $this->serializer->serialize($consultations, 'json', [
-            'groups' => ['consultation:read', 'getRendezVous', 'getPatient', 'getDocteur']
+            'groups' => ['consultation:read', 'getRendezVous', 'getPatient'],
+            'enable_max_depth' => true
         ]);
 
         return new JsonResponse($json, 200, [], true);
@@ -103,26 +107,25 @@ class ConsultationController extends AbstractController
             return new JsonResponse(['error' => 'Non authentifié'], Response::HTTP_UNAUTHORIZED);
         }
 
-        // Récupération du patient connecté
         $patient = $this->em->getRepository(Patient::class)->findOneBy(['user' => $user]);
         if (!$patient) {
             return new JsonResponse(['error' => 'Accès réservé aux patients'], Response::HTTP_FORBIDDEN);
         }
 
-        // Requête pour les consultations en ligne du patient
         $consultations = $this->em->getRepository(Consultation::class)
             ->createQueryBuilder('c')
-            ->join('c.rendezVous', 'r')
-            ->where('r.patient = :patient')
-            ->andWhere('r.typeConsultation = :type')
-            ->andWhere('r.statut = :statut')
+            ->innerJoin('c.rendezVous', 'r')
+            ->where('c.patient = :patient')
+            ->andWhere('LOWER(c.type) LIKE :type OR LOWER(r.typeConsultation) LIKE :type')
+            ->andWhere('c.statut != :statutTermine')
             ->setParameter('patient', $patient)
-            ->setParameter('type', 'en ligne')
-            ->setParameter('statut', 'confirmé')
-            ->orderBy('r.dateConsultationAt', 'ASC')
-            ->addOrderBy('r.heureConsultation', 'ASC')
+            ->setParameter('type', 'en_ligne')
+            ->setParameter('statutTermine', 'terminé')
+            ->orderBy('c.dateConsul', 'ASC')
+            ->addOrderBy('c.heureConsul', 'ASC')
             ->getQuery()
             ->getResult();
+
 
         $json = $this->serializer->serialize($consultations, 'json', [
             'groups' => ['consultation:read', 'getRendezVous', 'getDocteur']

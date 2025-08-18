@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Serializer\Annotation\Ignore;
 use Symfony\Component\Serializer\Attribute\Groups as AttributeGroups;
+use Symfony\Component\Serializer\Attribute\MaxDepth;
 
 #[ORM\Entity(repositoryClass: RendezVousRepository::class)]
 class RendezVous
@@ -45,13 +46,16 @@ class RendezVous
 
     #[ORM\ManyToOne(inversedBy: 'rendezVouses')]
     #[Groups(["getRendezVous", "consultation:read"])]
+    #[MaxDepth(1)]
     private ?Docteur $docteur = null;
 
     #[ORM\ManyToOne(inversedBy: 'rendezVouses')]
     #[Groups(["getRendezVous", "getPatient", "consultation:read"])]
+    #[MaxDepth(1)]
     private ?Patient $patient = null;
 
     #[ORM\OneToOne(mappedBy: 'rendezVous', cascade: ['persist', 'remove'])]
+    #[Ignore]
     private ?Consultation $consultation = null;
 
     public function getId(): ?int
