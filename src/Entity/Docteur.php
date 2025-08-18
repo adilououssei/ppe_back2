@@ -34,7 +34,7 @@ class Docteur
      * @var Collection<int, Specialite>
      */
     #[ORM\ManyToMany(targetEntity: Specialite::class, mappedBy: 'docteur')]
-    #[Groups(["getDocteur", "consultation:read"])]
+    #[Groups(["getDocteur", "consultation:read", "getRendezVous"])]
     private Collection $specialites;
 
     /**

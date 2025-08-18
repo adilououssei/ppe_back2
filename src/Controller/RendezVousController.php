@@ -167,7 +167,6 @@ final class RendezVousController extends AbstractController
                 ],
                 Response::HTTP_CREATED
             );
-
         } catch (\Exception $e) {
             return new JsonResponse(
                 ['error' => 'Erreur lors de la création: ' . $e->getMessage()],
@@ -212,32 +211,51 @@ final class RendezVousController extends AbstractController
         return new JsonResponse($jsonRendezVous, Response::HTTP_OK, [], true);
     }
 
-    //    #[Route('/api/rendezVous', name:"app_rendezvous_liste", methods: ['GET'])]
-    //    public function indexRendezVous(RendezVousRepository $rendezVousRepository, SerializerInterface $serializer): JsonResponse
-    //    {
-    //        $rendezVous = $rendezVousRepository->findAll();
-    //        $jsonRendezVous = $serializer->serialize($rendezVous, 'json', ['groups' => 'getRendezVous']);
-
-    //        return new JsonResponse($jsonRendezVous, Response::HTTP_OK, [], true);
-    //    }
-
     #[Route('/api/mes-rendezvous', name: 'mes_rendezvous', methods: ['GET'])]
-    public function mesRendezVous(EntityManagerInterface $em): JsonResponse
+    public function mesRendezVous(Request $request, EntityManagerInterface $em): JsonResponse
     {
         $user = $this->getUser();
 
-        // On récupère le Patient lié à l'utilisateur
         $patient = $em->getRepository(Patient::class)->findOneBy(['user' => $user]);
 
         if (!$patient) {
             return $this->json(['error' => 'Aucun patient lié à cet utilisateur.'], 404);
         }
 
-        // Récupère les rendez-vous du patient
-        $rendezVous = $em->getRepository(RendezVous::class)->findBy(['patient' => $patient]);
+        // Récupérer paramètres de pagination
+        $page = max(1, (int) $request->query->get('page', 1));
+        $limit = max(1, (int) $request->query->get('limit', 5));
+        $offset = ($page - 1) * $limit;
 
-        return $this->json($rendezVous, 200, [], ['groups' => 'getRendezVous']);
+        $repo = $em->getRepository(RendezVous::class);
+
+        // Récupère les RDV avec pagination
+        $qb = $repo->createQueryBuilder('r')
+            ->where('r.patient = :patient')
+            ->setParameter('patient', $patient)
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->orderBy('r.dateConsultationAt', 'DESC');
+
+        $rendezVous = $qb->getQuery()->getResult();
+
+        // Compter le total
+        $total = $repo->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->where('r.patient = :patient')
+            ->setParameter('patient', $patient)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $this->json([
+            'data' => $rendezVous,
+            'total' => (int) $total,
+            'page' => $page,
+            'limit' => $limit,
+            'totalPages' => ceil($total / $limit)
+        ], 200, [], ['groups' => 'getRendezVous']);
     }
+
 
     #[Route('/api/mes-rendezvous-docteur', name: 'mes_rendezvous_docteur', methods: ['GET'])]
     public function mesRendezVousDocteur(EntityManagerInterface $em): JsonResponse
