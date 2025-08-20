@@ -15,6 +15,7 @@ class Consultation
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['consultation:read', 'getRendezVous', 'getPatient', 'getDocteur'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'consultations')]

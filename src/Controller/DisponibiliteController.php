@@ -18,16 +18,20 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class DisponibiliteController extends AbstractController
 {
     #[Route('/disponibilites', name: 'get_disponibilites', methods: ['GET'])]
-    public function index(DisponibiliteRepository $repo, SerializerInterface $serializer): JsonResponse
+    public function index(Request $request, DisponibiliteRepository $repo): JsonResponse
     {
-        $disponibilites = $repo->findAll();
+        $docteurId = $request->query->get('docteur');
 
-        // Formattez manuellement les données
+        if (!$docteurId) {
+            return new JsonResponse(['error' => 'ID du docteur manquant'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $disponibilites = $repo->findBy(['docteur' => $docteurId]);
+
         $formattedData = [];
         foreach ($disponibilites as $dispo) {
             $creneaux = [];
             foreach ($dispo->getCreneaus() as $creneau) {
-                // Formattez l'heure comme vous le souhaitez (ex: "10:00")
                 $creneaux[] = $creneau->getDebut()->format('H:i');
             }
 
@@ -39,6 +43,7 @@ class DisponibiliteController extends AbstractController
 
         return new JsonResponse($formattedData);
     }
+
 
     #[Route('/disponibilites', name: 'add_disponibilite', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $em, SerializerInterface $serializer): JsonResponse

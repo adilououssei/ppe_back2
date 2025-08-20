@@ -74,10 +74,9 @@ class ConsultationController extends AbstractController
     /**
      * Termine une consultation
      */
-    #[Route('/{id}/complete', name: 'api_consultation_complete', methods: ['PUT'])]
-    public function completeConsultation(int $id, Request $request): JsonResponse
+    #[Route('/{id}/complete', name: 'api_consultation_complete', methods: ['PUT'], requirements: ['id' => '\d+'])]
+    public function completeConsultation(Consultation $consultation, Request $request): JsonResponse
     {
-        $consultation = $this->em->getRepository(Consultation::class)->find($id);
         if (!$consultation) {
             return new JsonResponse(['error' => 'Consultation non trouvée'], 404);
         }
@@ -85,19 +84,31 @@ class ConsultationController extends AbstractController
         $user = $this->security->getUser();
         $docteur = $this->em->getRepository(Docteur::class)->findOneBy(['user' => $user]);
 
-        if (!$docteur || $consultation->getRendezVous()->getDocteur() !== $docteur) {
+        if (!$docteur) {
+            return new JsonResponse(['error' => 'Docteur introuvable pour cet utilisateur'], 403);
+        }
+
+        if ($consultation->getRendezVous()?->getDocteur() !== $docteur) {
             return new JsonResponse(['error' => 'Action non autorisée'], 403);
         }
 
         $data = json_decode($request->getContent(), true);
+
         $consultation->setStatut('terminé');
         $consultation->setPrescription($data['prescription'] ?? '');
         $consultation->setUpdatedAt(new \DateTimeImmutable());
 
         $this->em->flush();
 
-        return new JsonResponse(['message' => 'Consultation terminée avec succès']);
+        return new JsonResponse([
+            'message' => 'Consultation terminée avec succès',
+            'id' => $consultation->getId(),
+            'statut' => $consultation->getStatut(),
+            'prescription' => $consultation->getPrescription()
+        ]);
     }
+
+
 
     #[Route('/patient/online', name: 'api_patient_consultations_online', methods: ['GET'])]
     public function getPatientConsultationsEnLigne(): JsonResponse
