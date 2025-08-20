@@ -32,14 +32,21 @@ class DisponibiliteController extends AbstractController
         foreach ($disponibilites as $dispo) {
             $creneaux = [];
             foreach ($dispo->getCreneaus() as $creneau) {
-                $creneaux[] = $creneau->getDebut()->format('H:i');
+                $creneaux[] = [
+                    'id' => $creneau->getId(),
+                    'debut' => $creneau->getDebut() ? $creneau->getDebut()->format('H:i') : null,
+                    'fin' => $creneau->getFin() ? $creneau->getFin()->format('H:i') : null,
+                    'type' => $creneau->getType(),
+                ];
             }
 
             $formattedData[] = [
+                'id' => $dispo->getId(),
                 'date' => $dispo->getDate()->format('Y-m-d'),
-                'creneaux' => $creneaux
+                'creneaux' => $creneaux,
             ];
         }
+
 
         return new JsonResponse($formattedData);
     }
