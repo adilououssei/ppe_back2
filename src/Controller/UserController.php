@@ -86,12 +86,12 @@ class UserController extends AbstractController
                 // n'affiche pas password
             ];
 
-            if ($user->getRoles() === 'doctor') {
+            if ($user->getRoles() === 'docteur') {
                 $doc = $this->docteurRepo->findOneBy(['user' => $user]);
                 if ($doc) {
                     $base['prenom'] = $doc->getPrenom();
                     $base['nom'] = $doc->getNom();
-                    $base['specialty'] = $doc->getSpecialty();
+                    $base['specialtes'] = $doc->getSpecialtes();
                     $base['status'] = $doc->getStatus();
                     $base['lastLogin'] = $doc->getLastLogin()?->format('Y-m-d');
                 }

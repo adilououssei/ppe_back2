@@ -40,7 +40,6 @@ class Patient
      * @var Collection<int, RendezVous>
      */
     #[ORM\OneToMany(targetEntity: RendezVous::class, mappedBy: 'patient')]
-    #[Ignore]
     private Collection $rendezVouses;
 
     /**

@@ -53,6 +53,7 @@ class Docteur
     private Collection $notifications;
 
     #[ORM\OneToOne(inversedBy: 'docteur', cascade: ['persist', 'remove'])]
+    #[Groups(["getDocteur"])]
     private ?User $user = null;
 
     /**

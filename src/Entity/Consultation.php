@@ -77,6 +77,7 @@ class Consultation
         return $this;
     }
 
+
     public function getDateConsul(): ?\DateTime
     {
         return $this->dateConsul;
@@ -185,4 +186,31 @@ class Consultation
         return $this;
     }
 
+    // Nom complet du docteur
+    #[Groups(["consultation:read"])]
+    public function getDocteurNomComplet(): ?string
+    {
+        return $this->rendezVous?->getDocteur()?->getPrenom() . ' ' . $this->rendezVous?->getDocteur()?->getNom();
+    }
+
+    // Date du rendez-vous
+    #[Groups(["consultation:read"])]
+    public function getDateRendezVous(): ?\DateTimeImmutable
+    {
+        return $this->rendezVous?->getDateConsultationAt();
+    }
+
+    // Heure du rendez-vous
+    #[Groups(["consultation:read"])]
+    public function getHeureRendezVous(): ?\DateTimeImmutable
+    {
+        return $this->rendezVous?->getHeureConsultation();
+    }
+
+    // Nom complet du patient pour le docteur
+    #[Groups(["consultation:read"])]
+    public function getPatientNomComplet(): ?string
+    {
+        return $this->patient ? ($this->patient->getPrenom() . ' ' . $this->patient->getNom()) : null;
+    }
 }
